@@ -31,7 +31,7 @@ def is_number(s):
     except ValueError:
         return False
 
-files = ["webclassification.csv", "UT_data.csv"]
+files = ["data/webclassification.csv", "data/UT_data.csv"]
 
 labels = []
 keywords = []
