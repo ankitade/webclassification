@@ -75,8 +75,8 @@ vectorizer = CountVectorizer(input='content',ngram_range=(1,2),decode_error ='ig
 X = vectorizer.fit_transform(final_tokens)
 X = X.toarray()
 
-models = [RandomForestClassifier(n_estimators = 300)]
-#models = [LogisticRegression(C=1,solver = 'lbfgs', multi_class = 'multinomial'), MultinomialNB(),RandomForestClassifier(n_estimators = 300)]
+#models = [RandomForestClassifier(n_estimators = 300)]
+models = [LogisticRegression(C=1,solver = 'lbfgs', multi_class = 'multinomial'), MultinomialNB(),RandomForestClassifier(n_estimators = 300)]
 folds = 5
 n = len(models)
 kfolder=StratifiedKFold(labels, n_folds= folds,shuffle=True)     
