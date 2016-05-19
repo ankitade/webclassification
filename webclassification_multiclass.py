@@ -19,7 +19,6 @@ from sklearn import tree
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-import xgboost as xgb
 import sklearn.metrics
 import numpy as np
 
@@ -32,18 +31,28 @@ def is_number(s):
         return False
 
 files = ["data/webclassification.csv", "data/UT_data.csv"]
-
 labels = []
 keywords = []
 
+filename = "data/data_country_codes.csv"
+df = pd.read_csv(filename)
+country_list = ['US','GB','IN','AU']
 for filename in files:
   f = codecs.open(filename,'r',encoding='ISO-8859-1')
   for line in f:
     arr = line.split("||")
     if len(arr) >= 6:
         if is_number(arr[1]) and int(arr[1])<400:
-            keywords.append(arr[3]+" "+arr[4]+" "+arr[5])
-            labels.append(arr[2])
+            if len(df.loc[df['FULL_URL'] == arr[0]]) == 0:
+                country = 'US'
+            else:
+                country = df.loc[df['FULL_URL'] == arr[0]]['brm_country_code'].iloc[0]
+            if country in country_list:
+              keywords.append(arr[3]+" "+arr[4]+" "+arr[5])
+              labels.append(arr[2])
+            
+
+
 
 stop = stopwords.words('english')
 stop.append("na")
@@ -75,7 +84,7 @@ vectorizer = CountVectorizer(input='content',ngram_range=(1,2),decode_error ='ig
 X = vectorizer.fit_transform(final_tokens)
 X = X.toarray()
 
-#models = [RandomForestClassifier(n_estimators = 300)]
+#models = [MultinomialNB()]
 models = [LogisticRegression(C=1,solver = 'lbfgs', multi_class = 'multinomial'), MultinomialNB(),RandomForestClassifier(n_estimators = 300)]
 folds = 5
 n = len(models)
@@ -90,6 +99,7 @@ ensemble_f1_macro = 0
 ensemble_f1_micro = 0
 ensemble_f1_weighted = 0
 label_set = [1,2,3,4,5,6,7,11,10003,10008]
+
 for train_index, test_index in kfolder: 
 
     X_train, X_cv = X[train_index], X[test_index]
@@ -104,13 +114,13 @@ for train_index, test_index in kfolder:
       preds[i]=models[i].predict(X_cv)
       probabilities = models[i].predict_proba(X_cv)
       #print sorted(probabilities[:,0])
-      for index in range(10):
-        for k in range(1,11):
-          temp = (k * len(y_cv)) / (100)
-          sorted_labels = [x for y,x in sorted(zip(probabilities[:,index],y_cv),reverse=True)]
-          precision =  float(sorted_labels[0:temp].count(label_set[index]))/float(temp)
-          #print label_set[index],precision
-      #print models[i].classes_
+#      for index in range(len(label_set)):
+#        for k in range(1,11):
+#          temp = (k * len(y_cv)) / (100)
+#          sorted_labels = [x for y,x in sorted(zip(probabilities[:,index],y_cv),reverse=True)]
+#          precision =  float(sorted_labels[0:temp].count(label_set[index]))/float(temp)
+#          #print label_set[index],precision
+#      #print models[i].classes_
       mean_accuracy[i] += sklearn.metrics.accuracy_score(y_cv, preds[i])
       mean_f1_macro[i] += sklearn.metrics.f1_score(y_cv, preds[i], average = 'macro')
       mean_f1_micro[i] += sklearn.metrics.f1_score(y_cv, preds[i], average = 'micro')
@@ -136,6 +146,8 @@ for train_index, test_index in kfolder:
     ensemble_f1_micro += sklearn.metrics.f1_score(y_cv, final_preds, average = 'micro')
     ensemble_f1_weighted += sklearn.metrics.f1_score(y_cv, final_preds, average = 'weighted')
     j+=1
+
+
 
     
 mean_accuracy/=j
