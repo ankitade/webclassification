@@ -44,6 +44,7 @@ def __setup_argument_parser():
     return parser.parse_args()
 
 def __read_training_file(filename):
+  # reads the training file and outputs the set of keywords and the corresponding label for each url
   country = "data/data_country_codes.csv"
   df = pd.read_csv(country)
 
@@ -67,6 +68,7 @@ def __read_training_file(filename):
 
 
 def __tokenize_test(keywords):
+  #performs preprocessing for the testing keywords and returns the tokens
   stop = stopwords.words('english')
   stop.append("na")
   stop.append("")
@@ -91,6 +93,7 @@ def __tokenize_test(keywords):
   
 
 def __tokenize(keywords,labels):
+  #performs preprocessing for the training keywords and returns the final tokens and final labels
   stop = stopwords.words('english')
   stop.append("na")
   stop.append("")
@@ -114,18 +117,21 @@ def __tokenize(keywords,labels):
   return (final_tokens,final_labels)
 
 def __create_ngram_matrix(tokens,test_tokens,n):
+  #returns the ngram count matrix for the training tokens and the test tokens
   vectorizer = CountVectorizer(input='content',ngram_range=(1,n),decode_error ='ignore', stop_words='english',analyzer='word')
   X = vectorizer.fit_transform(tokens+test_tokens)
   X = X.toarray()
   return X
 
 def __train(X, labels):
+  #trains the models on the training count matrix
   models = [LogisticRegression(C=1,solver = 'lbfgs', multi_class = 'multinomial'), MultinomialNB(),RandomForestClassifier(n_estimators = 300)]
   for model in models:
     model.fit(X,labels)
   return models
 
 def __read_testing_file(filename):
+  #reads the testing file and outputs the set of keywords for each url
   country = "data/data_country_codes.csv"
   df = pd.read_csv(country)
   country_list = ['US','GB','IN','AU']
@@ -147,6 +153,7 @@ def __read_testing_file(filename):
   return keywords
 
 def predict(test,models):
+  # returns the predictions for the given test matrix
   preds = np.zeros((len(models),len(test)))
   for i in range(len(models)):
     preds[i]=models[i].predict(test)
@@ -161,6 +168,7 @@ def predict(test,models):
   return final_preds
 
 def __write_predictions(predictions, out_file):
+  # writes the predictions to the output file
   with open(out_file,'w') as f:
     for pred in predictions:
       f.write('%f\n'%pred)
