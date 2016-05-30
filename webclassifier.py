@@ -137,7 +137,7 @@ def __read_testing_file(filename):
   country_list = ['US','GB','IN','AU']
   labels = []
   keywords = []
-
+  urls = []
   f = codecs.open(filename,'r',encoding='ISO-8859-1')
   for line in f:
     arr = line.split("||")
@@ -148,30 +148,37 @@ def __read_testing_file(filename):
             else:
                 country = df.loc[df['FULL_URL'] == arr[0]]['brm_country_code'].iloc[0]
             if country in country_list:
+              urls.append(arr[0])
               keywords.append(arr[2]+" "+arr[3]+" "+arr[4])
 
-  return keywords
+  return urls,keywords
 
 def predict(test,models):
   # returns the predictions for the given test matrix
   preds = np.zeros((len(models),len(test)))
+  prob = np.zeros((len(models),len(test)))
   for i in range(len(models)):
     preds[i]=models[i].predict(test)
+    prob[i] = models[i].predict_proba(test).max(1)
+
 
   final_preds = np.zeros(len(test))
+  final_prob = np.zeros(len(test))
   for i in range(len(test)):
      temp = Counter(preds[:,i]).most_common(1)[0]
      if temp[1] == 1:
         final_preds[i] = preds[0,i]
+        final_prob[i] = prob[0,i]
      else:
         final_preds[i] = temp[0]
-  return final_preds
+        final_prob[i] = prob[np.argmax(preds[:,i]),i]
+  return (final_preds,final_prob)
 
-def __write_predictions(predictions, out_file):
+def __write_predictions(urls,predictions, probabilities,out_file):
   # writes the predictions to the output file
   with open(out_file,'w') as f:
-    for pred in predictions:
-      f.write('%f\n'%pred)
+    for (url,pred,prob) in zip(urls,predictions,probabilities):
+      f.write('%s,%f,%f\n'%(url,pred,prob))
   
 def main():
   parsed_args = __setup_argument_parser()
@@ -181,12 +188,12 @@ def main():
   n = parsed_args.ngram
   keywords, labels = __read_training_file(training_file)
   final_tokens, labels = __tokenize(keywords,labels)
-  test = __read_testing_file(testing_file)
+  urls,test = __read_testing_file(testing_file)
   test_tokens = __tokenize_test(test)
   matrix = __create_ngram_matrix(final_tokens,test_tokens,n)
   models = __train(matrix[:len(final_tokens)],labels)
-  predictions = predict(matrix[len(final_tokens):],models)
-  __write_predictions(predictions,out_file)
+  predictions, probabilities = predict(matrix[len(final_tokens):],models)
+  __write_predictions(urls,predictions,probabilities,out_file)
 
 if __name__ == '__main__':
   main()
